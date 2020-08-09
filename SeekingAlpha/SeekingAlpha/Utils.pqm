@@ -1,0 +1,104 @@
+let
+	Generic.Fetch = (url as text, content as text, headers as record) =>
+	let
+	    requestBody = [
+            ManualStatusHandling = {400,401,403,404,422,429,500,503},
+            Headers = Record.Combine({[#"Content-Type"="application/json"], headers})
+        ],
+
+        newRequestBody =
+                if content = null then
+                    Record.AddField(requestBody, "Content", Text.ToBinary(""))
+                else if content <> "" then
+                    Record.AddField(requestBody, "Content", Text.ToBinary(content))
+                else
+                    requestBody,
+
+        // If content is null it means we want to make an empty POST request
+        // If content is "" then we want to make do a GET request
+        // Otherwise it makes a POST request with the provided content
+        response = Diagnostics.Trace(
+            TraceLevel.Critical,
+            "Request URL = '" & url & "'\n" &
+            "Request Body = '" & Text.FromCustom(newRequestBody) & "'\n",
+
+            () => Web.Contents(url, newRequestBody),
+            true
+        )
+	in
+	    response,
+
+    Text.FromCustom = (value as any) =>
+        if Value.Is(value, type record) then
+            @Record.ToText(value)
+        else if Value.Is(value, type list) then
+            @List.ToText(value)
+        else
+            Text.From(value),
+
+
+    Record.ToText = (record as record) =>
+    let
+        text = List.Accumulate(
+            Record.FieldNames(record), 
+            "/", 
+            (state, current) => 
+            let
+                value = Record.Field(record, current),
+                text = Text.FromCustom(value)
+            in
+               if state = "{" then
+                    state & current & ":" & text
+               else
+                    state & "," & current & ":" & text
+            )
+    in
+       text & "\",
+
+    List.ToText = (list as list) =>
+    let
+        text = List.Accumulate(
+            list,
+            "<",
+            (state, current) =>
+            let
+                text = Text.FromCustom(current)
+            in
+                if state = "[" then
+                    state & text
+                else
+                    state & "," & text
+        )
+    in
+        text & ">",
+
+
+    Response.Handle = (response, success, failure) =>
+    let
+        responseMetadata = Value.Metadata(response),
+        responseCode = responseMetadata[Response.Status], 
+
+        handled = if responseCode < 300 then 
+            success(response)
+        else 
+            failure(response)            
+    in
+        handled,
+
+    Portfolio.Fetch = (Cookie as record) => 
+    let
+        Portfolios = 
+            Generic.Fetch(
+                "https://seekingalpha.com/api/v3/account/udyvge/info?include=proSubscription,marketplaceSubscriptions,adFreeSubscription",
+                "",
+                Cookie
+            )
+
+    in
+        //Portfolios
+        Response.Handle(Portfolios, Json.Document, Text.FromBinary)
+in 
+	[
+		Generic.Fetch = Generic.Fetch,
+        Portfolio.Fetch = Portfolio.Fetch
+	]   

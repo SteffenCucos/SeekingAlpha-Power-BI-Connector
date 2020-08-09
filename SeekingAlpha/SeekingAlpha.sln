@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30320.27
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{4DF76451-A46A-4C0B-BE03-459FAAFA07E6}") = "SeekingAlpha", "SeekingAlpha\SeekingAlpha.mproj", "{FB45B805-04E8-49A1-951E-18D4B02EBF4B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FB45B805-04E8-49A1-951E-18D4B02EBF4B}.Debug|x86.ActiveCfg = Debug|x86
+		{FB45B805-04E8-49A1-951E-18D4B02EBF4B}.Debug|x86.Build.0 = Debug|x86
+		{FB45B805-04E8-49A1-951E-18D4B02EBF4B}.Release|x86.ActiveCfg = Release|x86
+		{FB45B805-04E8-49A1-951E-18D4B02EBF4B}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A1C8605D-1786-4240-A4DA-7A512B385EBA}
+	EndGlobalSection
+EndGlobal
