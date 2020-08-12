@@ -29,48 +29,62 @@ let
 	    response,
 
     Text.FromCustom = (value as any) =>
-        if Value.Is(value, type record) then
+        if Value.Is(value, type null) then
+            "null"
+        else if Value.Is(value, type record) then
             @Record.ToText(value)
         else if Value.Is(value, type list) then
             @List.ToText(value)
+        else if Value.Is(value, type logical) then
+            Text.From(value)
+        else if Value.Is(value, type text) <> true then
+            Text.From(value)
         else
-            Text.From(value),
+            """" & Text.From(value) & """",
 
 
     Record.ToText = (record as record) =>
     let
-        text = List.Accumulate(
-            Record.FieldNames(record), 
-            "/", 
-            (state, current) => 
-            let
-                value = Record.Field(record, current),
-                text = Text.FromCustom(value)
-            in
-               if state = "{" then
-                    state & current & ":" & text
-               else
-                    state & "," & current & ":" & text
-            )
+        text = 
+            if Record.FieldCount(record) = 0 then
+                ""
+            else 
+                List.Accumulate(
+                    Record.FieldNames(record), 
+                    "", 
+                    (state, current) => 
+                    let
+                        value = Record.Field(record, current),
+                        text = Text.FromCustom(value)
+                    in
+                       if state = "" then
+                            state & Text.FromCustom(current) & ":" & text
+                       else
+                            state & "," & Text.FromCustom(current) & ":" & text
+                )
     in
-       text & "\",
+       "{" & text & "}",
 
     List.ToText = (list as list) =>
     let
-        text = List.Accumulate(
-            list,
-            "<",
-            (state, current) =>
-            let
-                text = Text.FromCustom(current)
-            in
-                if state = "[" then
-                    state & text
-                else
-                    state & "," & text
-        )
+        text = 
+            if List.Count(list) = 0 then 
+                ""
+            else
+                List.Accumulate(
+                    list,
+                    "",
+                    (state, current) =>
+                    let
+                        text = Text.FromCustom(current)
+                    in
+                        if state = "" then
+                            state & text
+                        else
+                            state & "," & text
+                )
     in
-        text & ">",
+       "[" & text & "]",
 
 
     Response.Handle = (response, success, failure) =>
@@ -89,16 +103,53 @@ let
     let
         Portfolios = 
             Generic.Fetch(
-                "https://seekingalpha.com/api/v3/account/udyvge/info?include=proSubscription,marketplaceSubscriptions,adFreeSubscription",
+                "https://seekingalpha.com/api/v3/account/dummy/portfolios?include=tickers",
                 "",
                 Cookie
             )
 
     in
         //Portfolios
-        Response.Handle(Portfolios, Json.Document, Text.FromBinary)
+        Response.Handle(Portfolios, (response) => Json.Document(response)[included], Text.FromBinary),
+
+
+    Stock.FetchChart = (symbol as text, period as text) =>
+    let
+        url = "https://finance.api.seekingalpha.com/v2/chart?period=" & period & "&symbol=" & symbol,
+        data = Generic.Fetch(
+                url,
+                "",
+                []
+            )
+    in
+        Response.Handle(data, Json.Document, Text.FromBinary),
+
+    Table.ToNavigationTable = (rows as list) as table =>
+    let
+        keyColumns = {"Key"},
+        nameColumn = "Name",
+        dataColumn = "Data",
+        itemKindColumn = "ItemKind",
+        itemNameColumn = "ItemName",
+        isLeafColumn = "IsLeaf",
+        table = #table({"Name", "Key", "Data", "ItemKind", "ItemName", "IsLeaf"}, rows),
+        tableType = Value.Type(table),
+        newTableType = Type.AddTableKey(tableType, keyColumns, true) meta 
+        [
+            NavigationTable.NameColumn = nameColumn, 
+            NavigationTable.DataColumn = dataColumn,
+            NavigationTable.ItemKindColumn = itemKindColumn, 
+            Preview.DelayColumn = itemNameColumn, 
+            NavigationTable.IsLeafColumn = isLeafColumn
+        ],
+        navigationTable = Value.ReplaceType(table, newTableType)
+    in
+        navigationTable
+
 in 
 	[
 		Generic.Fetch = Generic.Fetch,
-        Portfolio.Fetch = Portfolio.Fetch
+        Portfolio.Fetch = Portfolio.Fetch,
+        Stock.FetchChart = Stock.FetchChart,
+        Table.ToNavigationTable = Table.ToNavigationTable
 	]   
